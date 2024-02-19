@@ -1,0 +1,12 @@
+type Resource {
+  Identifier: String!
+  Properties: String
+}
+
+type Lambda {
+  Id: String!
+}
+
+type Query {
+  listResources(type: String): [Resource!]!
+}

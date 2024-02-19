@@ -1,0 +1,76 @@
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+
+  AtsApi:
+    Type: AWS::Serverless::GraphQLApi
+    Properties:
+      SchemaUri: "api/schema.gql"
+      Auth:
+        Type: AWS_IAM
+      DataSources:
+        Lambda:
+          CcApiListResourcesDs:
+            FunctionArn: !GetAtt CcApiListResources.Arn
+      Resolvers:
+        Query:
+          listResources:
+            Runtime:
+              Name: APPSYNC_JS
+              Version: 1.0.0
+            Pipeline:
+              - listCcApi
+      Functions:
+        listCcApi:
+          CodeUri: "api/functions/listCcApi.js"
+          DataSource: CcApiListResourcesDs
+          Runtime:
+            Name: APPSYNC_JS
+            Version: 1.0.0
+
+  CcApiListResources:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt CcApiRole.Arn
+      CodeUri: "cc_api/"
+      Handler: list_resources.handler
+      Runtime: python3.10
+
+  CcApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CcApiPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudcontrolapi:GetResource
+                  - cloudcontrolapi:ListResources
+                  - cloudformation:ListResources
+                  - lambda:ListFunctions
+                Resource: "*"
+
+  # CcApi:
+  #   Type: AWS::AppSync::DataSource
+  #   Properties:
+  #     ApiId: !GetAtt AtsApi.ApiId
+  #     Name: CCAPI
+  #     Type: HTTP
+  #     ServiceRoleArn: !GetAtt CcApiRole.Arn
+  #     HttpConfig:
+  #       Endpoint: !Sub "https://cloudcontrolapi.${AWS::Region}.amazonaws.com"
+  #       AuthorizationConfig:
+  #         AuthorizationType: AWS_IAM
+  #         AwsIamConfig:
+  #           SigningRegion: !Ref AWS::Region
+  #           SigningServiceName: cloudcontrolapi
+
